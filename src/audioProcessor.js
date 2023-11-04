@@ -9,7 +9,8 @@ function generateStream(inputAudioFile) {
 
     const fs = require('fs');
     if (!fs.existsSync(outputDirectory)) {
-    fs.mkdirSync(outputDirectory, { recursive: true });
+        fs.mkdirSync(inputDirectory, { recursive: true });
+        fs.mkdirSync(outputDirectory, { recursive: true });
     }
 
     const ffmpegProbeCommand = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${path.join(inputDirectory, inputAudioFile)}`;
