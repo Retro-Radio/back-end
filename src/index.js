@@ -3,6 +3,7 @@ const cors = require('cors');
 const youtube = require("./youtubeFunctions.js");
 const fs = require('fs');
 const app = express();
+var {spawn} = require('child_process')
 
 app.use(cors({origin: `*`}));
 app.use(express.json());
@@ -25,14 +26,40 @@ app.post('/youtube', async (req, res) => {
     }
     path = await youtube.downloadVideo(link);
     console.log("Path: " + path);
+    const outputFilePath = `distorted_${videoId}.mp3`;
     
-    res.status(200).json({title: title});
+    if (fs.existsSync(outputFilePath)) {
+        // If the output file already exists, just send the response with the title
+        res.status(200).json({ title: title });
+        return;
+    }
+
+    path = await youtube.downloadVideo(link);
+    console.log("Path: " + path);
+    const inputFilePath = `${path}`;
+    
+    const ffmpegCommand = `-i ${inputFilePath} -af "acrusher=level_in=3:level_out=16:bits=8:mode=log:aa=0.7:1" ${outputFilePath}`;
+    const ffmpegProcess = spawn("ffmpeg", ffmpegCommand.split(" "), { shell: true });
+
+    ffmpegProcess.on('error', (error) => {
+        console.log("ffmpeg error: " + error);
+    });
+
+    ffmpegProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('Audio distortion complete.');
+          // Now, you can send a response to your client.
+          res.status(200).json({ title: title });
+        } else {
+          console.error('Error running ffmpeg.');
+        }
+    });
   })
 
   app.get('/audio-stream', async (req, res) => {
     let { url } = req.query;
     let videoId = url;
-    url += ".mp3";
+    url = "distorted_" + url + ".mp3";
     console.log(url);
     stat = fs.statSync(url);
     res.writeHead(200, {

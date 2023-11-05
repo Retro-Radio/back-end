@@ -27,7 +27,7 @@ const downloadVideo = async (url) => {
     
         stream.on('end', () => {
           console.log(`Video downloaded as ${outputFileName}`);
-          resolve(outputFileName);
+        resolve(outputFileName);
         })
       });
     } catch (error) {
