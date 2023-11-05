@@ -37,7 +37,12 @@ app.post('/youtube', async (req, res) => {
         res.status(200).json({ title: title });
         return;
     }
-
+    if(distortion == 0) {
+        fs.copyFileSync(path, outputFilePath);
+        res.status(200).json({ title: title });
+        fs.rmSync(path);
+        return;
+    }
     path = await youtube.downloadVideo(link);
     console.log("Path: " + path);
     const inputFilePath = `${path}`;
