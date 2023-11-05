@@ -15,6 +15,10 @@ app.listen(PORT, () => {
 
 app.post('/youtube', async (req, res) => {
     let link  = req.body.link;
+    let distortion = req.body.distortion;
+    if(distortion == null) {
+        distortion = 3;
+    }
     const parsedUrl = new URL(link);
     const searchParams = new URLSearchParams(parsedUrl.search);
     const videoId = searchParams.get("v");
@@ -26,7 +30,7 @@ app.post('/youtube', async (req, res) => {
     }
     path = await youtube.downloadVideo(link);
     console.log("Path: " + path);
-    const outputFilePath = `distorted_${videoId}.mp3`;
+    const outputFilePath = `distorted_${distortion}_${videoId}.mp3`;
     
     if (fs.existsSync(outputFilePath)) {
         // If the output file already exists, just send the response with the title
@@ -38,7 +42,7 @@ app.post('/youtube', async (req, res) => {
     console.log("Path: " + path);
     const inputFilePath = `${path}`;
     
-    const ffmpegCommand = `-i ${inputFilePath} -af "acrusher=level_in=3:level_out=16:bits=8:mode=log:aa=0.7:1" ${outputFilePath}`;
+    const ffmpegCommand = `-i ${inputFilePath} -af "acrusher=level_in=${distortion}:level_out=16:bits=8:mode=log:aa=0.7:1" ${outputFilePath}`;
     const ffmpegProcess = spawn("ffmpeg", ffmpegCommand.split(" "), { shell: true });
 
     ffmpegProcess.on('error', (error) => {
@@ -50,6 +54,7 @@ app.post('/youtube', async (req, res) => {
           console.log('Audio distortion complete.');
           // Now, you can send a response to your client.
           res.status(200).json({ title: title });
+          fs.rmSync(inputFilePath);
         } else {
           console.error('Error running ffmpeg.');
         }
@@ -57,10 +62,18 @@ app.post('/youtube', async (req, res) => {
   })
 
   app.get('/audio-stream', async (req, res) => {
-    let { url } = req.query;
+    let { url, distortion } = req.query;
     let videoId = url;
-    url = "distorted_" + url + ".mp3";
+    if(distortion == null) {
+        distortion = 3;
+    }
+    url = "distorted_" + distortion + '_' + url + ".mp3";
     console.log(url);
+    // Check if the file exists
+    if (!fs.existsSync(url)) {
+        res.status(400).json({error: "Invalid Link"});
+        return;
+    }
     stat = fs.statSync(url);
     res.writeHead(200, {
         'Content-Type': 'audio/mpeg',
